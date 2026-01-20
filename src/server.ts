@@ -4,7 +4,7 @@ import { api } from './api'
 import path from 'path'
 
 const clientDistDir = path.resolve(process.cwd(), 'dist/client')
-const isProd = (process as any)?.env?.NODE_ENV === 'production' || (globalThis as any)?.Bun?.env?.NODE_ENV === 'production'
+const isProd = import.meta.env.PROD
 
 export default createServerEntry({
     async fetch(request) {
