@@ -1,0 +1,4 @@
+# Bun create configuration
+[create]
+# Only copy the template directory when using bun create
+include = ["template/**"]
