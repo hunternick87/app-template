@@ -1,15 +1,8 @@
 {
-  "name": "create-app-template",
-  "version": "1.0.0",
-  "description": "A template for creating modern web applications with Bun, React, TanStack, and Vite",
+  "name": "{{PROJECT_NAME}}",
+  "module": "index.ts",
   "type": "module",
-  "bin": {
-    "create-app-template": "./cli/index.js"
-  },
-  "files": [
-    "template",
-    "cli"
-  ],
+  "private": true,
   "scripts": {
     "dev": "bun --bun run vite",
     "build": "bun --bun run vite build",

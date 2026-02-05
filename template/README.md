@@ -2,21 +2,6 @@
 
 A modern web application template with Bun, React, TanStack Router/Query, and Vite.
 
-## Quick Start
-
-Create a new project using npm or bun:
-
-```bash
-# Using npm
-npm create app-template my-app
-
-# Using bun
-bun create app-template my-app
-
-# Or without a project name (uses current directory)
-npm create app-template
-```
-
 ## Development
 
 To install dependencies:
