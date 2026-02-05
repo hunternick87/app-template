@@ -5,8 +5,6 @@ import { ThemeToggle } from '@/components/themeToggle'
 import { readCount, incrementCount } from '@/api'
 import { useQuery, useMutation } from '@tanstack/react-query'
 
-const filePath = 'src/private/count.txt'
-
 export const Route = createFileRoute('/demo/apiFunc')({
     component: Home
 })
