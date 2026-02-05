@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import readline from 'readline';
+import { spawn } from "node:child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,6 +38,8 @@ async function main() {
       process.exit(1);
     }
   }
+
+  const autoCode = await prompt('Auto launch VS code after install? (Y/N) ');
 
   // Determine the target directory
   const targetDir = path.resolve(process.cwd(), projectName);
@@ -84,12 +87,23 @@ async function main() {
   packageJson = packageJson.replace('{{PROJECT_NAME}}', projectName);
   fs.writeFileSync(packageJsonPath, packageJson);
 
-  console.log('✅ Template files copied successfully!');
-  console.log('\nNext steps:');
-  console.log(`  cd ${projectName}`);
-  console.log('  bun install');
-  console.log('  bun run dev');
-  console.log('\nHappy coding! 🚀');
+  if (!autoCode) {
+    console.log('✅ Template files copied successfully!');
+    console.log('\nNext steps:');
+    console.log(`  cd ${projectName}`);
+    console.log('  bun install');
+    console.log('  bun run dev');
+    console.log('\nHappy coding! 🚀');
+  } else {
+    console.log('✅ Template files copied successfully!');
+    console.log('  Auto opening VS code...');
+    console.log('\nHappy coding! 🚀');
+
+    spawn("code", [projectName], {
+      stdio: "inherit",
+      shell: true,
+    });
+  }
   
   rl.close();
 }
