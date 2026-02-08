@@ -145,7 +145,7 @@ async function main() {
     }, null, 2));
 
     // database specific setup
-    const drizzleConfigPath = path.join(targetDir, 'drizzle.json');
+    const drizzleConfigPath = path.join(targetDir, 'drizzle.config.ts');
     const dbIndexPath = path.join(targetDir, 'src', 'db', 'index.ts');
     let drizzleConfigJson = fs.readFileSync(drizzleConfigPath, 'utf8');
     let dbIndexJson = fs.readFileSync(dbIndexPath, 'utf8');
