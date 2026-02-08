@@ -154,7 +154,7 @@ async function main() {
         dbIndexJson = dbIndexJson.replace('{{drizzleImport}}', "import { drizzle } from 'drizzle-orm/bun-sqlite';");
         drizzleConfigJson = drizzleConfigJson.replace('{{drizzleDialect}}', "sqlite");
 
-        fs.copyFileSync(genericDir + "/bun_sqlite/schema.ts", targetDir + '/src/db/schema.ts');
+        fs.copyFileSync(genericDir + "/db/bun_sqlite/schema.ts", targetDir + '/src/db/schema.ts');
     } else if (database === 'postgresql') {
         // PostgreSQL specific setup if needed
         dbIndexJson = dbIndexJson.replace('{{drizzleImport}}', "import { drizzle } from 'drizzle-orm/node-postgres';");
@@ -170,7 +170,7 @@ async function main() {
           install.on('close', (code) => code === 0 ? resolve() : reject());
         });
 
-        fs.copyFileSync(genericDir + "/postgresql/schema.ts", targetDir + '/src/db/schema.ts');
+        fs.copyFileSync(genericDir + "/db/postgresql/schema.ts", targetDir + '/src/db/schema.ts');
     }
 
     fs.writeFileSync(drizzleConfigPath, drizzleConfigJson);
