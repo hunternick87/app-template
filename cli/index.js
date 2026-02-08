@@ -141,7 +141,7 @@ async function main() {
     const configPath = path.join(targetDir, 'project.config.json');
     fs.writeFileSync(configPath, JSON.stringify({
         database,
-        features,
+        // features,
     }, null, 2));
 
     // database specific setup
