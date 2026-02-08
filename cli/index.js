@@ -109,7 +109,7 @@ async function main() {
 
     // Copy template files
     const templateDir = path.resolve(__dirname, '..', 'template');
-    const genericDir = path.resolve(__dirname, '..', 'generic');
+    const genericDir = path.resolve(templateDir, '..', 'generic');
 
     function copyRecursive(src, dest) {
         const stats = fs.statSync(src);
