@@ -8,7 +8,8 @@
   },
   "files": [
     "template",
-    "cli"
+    "cli",
+    "generic"
   ],
   "scripts": {
     "dev": "bun --bun run vite",

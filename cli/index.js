@@ -109,7 +109,7 @@ async function main() {
 
     // Copy template files
     const templateDir = path.resolve(__dirname, '..', 'template');
-    const genericDir = path.resolve(__dirname, '..', 'generic');
+    const genericDir = path.resolve(templateDir, '..', 'generic');
 
     function copyRecursive(src, dest) {
         const stats = fs.statSync(src);
@@ -145,7 +145,7 @@ async function main() {
     }, null, 2));
 
     // database specific setup
-    const drizzleConfigPath = path.join(targetDir, 'drizzle.json');
+    const drizzleConfigPath = path.join(targetDir, 'drizzle.config.ts');
     const dbIndexPath = path.join(targetDir, 'src', 'db', 'index.ts');
     let drizzleConfigJson = fs.readFileSync(drizzleConfigPath, 'utf8');
     let dbIndexJson = fs.readFileSync(dbIndexPath, 'utf8');
@@ -154,7 +154,7 @@ async function main() {
         dbIndexJson = dbIndexJson.replace('{{drizzleImport}}', "import { drizzle } from 'drizzle-orm/bun-sqlite';");
         drizzleConfigJson = drizzleConfigJson.replace('{{drizzleDialect}}', "sqlite");
 
-        fs.copyFileSync(genericDir + "/bun_sqlite/schema.ts", targetDir + '/src/db/schema.ts');
+        fs.copyFileSync(genericDir + "/db/bun_sqlite/schema.ts", targetDir + '/src/db/schema.ts');
     } else if (database === 'postgresql') {
         // PostgreSQL specific setup if needed
         dbIndexJson = dbIndexJson.replace('{{drizzleImport}}', "import { drizzle } from 'drizzle-orm/node-postgres';");
@@ -170,7 +170,7 @@ async function main() {
           install.on('close', (code) => code === 0 ? resolve() : reject());
         });
 
-        fs.copyFileSync(genericDir + "/postgresql/schema.ts", targetDir + '/src/db/schema.ts');
+        fs.copyFileSync(genericDir + "/db/postgresql/schema.ts", targetDir + '/src/db/schema.ts');
     }
 
     fs.writeFileSync(drizzleConfigPath, drizzleConfigJson);
