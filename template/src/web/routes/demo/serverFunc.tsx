@@ -5,7 +5,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from '@/components/themeToggle'
 
-const filePath = 'src/private/count.txt'
+const filePath = 'private/count.txt'
 
 async function readCount() {
     return parseInt(await fs.promises.readFile(filePath, 'utf-8').catch(() => '0'))
