@@ -53,7 +53,7 @@ async function main() {
         message: 'What are you building?',
         options: [
             { value: 'web', label: 'Website', hint: 'Browser app (current template)' },
-            { value: 'electron', label: 'Electron', hint: 'Desktop app wrapper around the web app' },
+            // { value: 'electron', label: 'Electron', hint: 'Desktop app wrapper around the web app' }, // temp hide until we have the electron overlay ready
         ],
     });
 
