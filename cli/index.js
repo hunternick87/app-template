@@ -104,12 +104,26 @@ async function main() {
         process.exit(0);
     }
 
-    const autoCode = await p.confirm({
-        message: 'Open in VS Code after installation?',
-        initialValue: false,
+    // const autoCode = await p.confirm({
+    //     message: 'Open in VS Code after installation?',
+    //     initialValue: false,
+    // });
+
+    // if (p.isCancel(autoCode)) {
+    //     p.cancel('Operation cancelled.');
+    //     process.exit(0);
+    // }
+
+    const codeEditor = await p.multiselect({
+        message: 'Open in code editor after installation?',
+        options: [
+            { value: 'vscode', label: 'VS Code' },
+            { value: 'antigravity', label: 'Antigravity' },
+        ],
+        required: false,
     });
 
-    if (p.isCancel(autoCode)) {
+    if (p.isCancel(codeEditor)) {
         p.cancel('Operation cancelled.');
         process.exit(0);
     }
@@ -203,6 +217,11 @@ async function main() {
         drizzleConfigJson = drizzleConfigJson.replace('{{drizzleDialect}}', "sqlite");
 
         fs.copyFileSync(genericDir + "/db/bun_sqlite/schema.ts", targetDir + '/src/db/schema.ts');
+
+        await new Promise((resolve, reject) => {
+          const install = spawn('bun', ['install', '@libsql/client'], { cwd: targetDir, stdio: 'pipe' });
+          install.on('close', (code) => code === 0 ? resolve() : reject());
+        });
     } else if (database === 'postgresql') {
         // PostgreSQL specific setup if needed
         dbIndexJson = dbIndexJson.replace('{{drizzleImport}}', "import { drizzle } from 'drizzle-orm/node-postgres';");
@@ -304,8 +323,20 @@ async function main() {
     }
 
     // Open in VS Code if confirmed
-    if (autoCode) {
-        spawn("code", [targetDir], {
+    // if (autoCode) {
+    //     spawn("code", [targetDir], {
+    //         stdio: "inherit",
+    //         shell: true,
+    //     });
+    // }
+
+    if (codeEditor) {
+        const editorCommands = {
+            vscode: 'code',
+            antigravity: 'antigravity',
+        };
+        const editorCommand = editorCommands[codeEditor[0]];
+        spawn(editorCommand, [targetDir], {
             stdio: "inherit",
             shell: true,
         });
