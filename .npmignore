@@ -1,8 +1,0 @@
-# Development files - don't include in npm package
-src/
-node_modules/
-dist/
-.git/
-.gitignore
-*.log
-.DS_Store
