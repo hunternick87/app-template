@@ -1,45 +1,49 @@
 {
   "name": "{{PROJECT_NAME}}",
-  "module": "index.ts",
   "type": "module",
   "private": true,
+  "engines": {
+    "bun": ">=1.3.4"
+  },
+  "packageManager": "bun@1.3.4",
   "scripts": {
     "dev": "bun --bun run vite",
     "build": "bun --bun run vite build",
-    "start": "bun dist/server/server.js"
+    "start": "bun dist/server/server.js",
+    "typecheck": "tsc --noEmit",
+    "check": "bun run typecheck && bun run build"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "^25.0.9",
-    "@types/react": "^19.2.8",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^26.1.2",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.2",
-    "drizzle-kit": "^0.31.8",
+    "@vitejs/plugin-react": "^6.0.4",
+    "drizzle-kit": "^0.31.10",
     "tw-animate-css": "^1.4.0",
-    "vite": "^7.3.1",
-    "vite-tsconfig-paths": "^6.0.4"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
+    "vite": "^8.1.5",
+    "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@radix-ui/react-slot": "^1.2.4",
-    "@tailwindcss/vite": "^4.1.18",
-    "@tanstack/react-query": "^5.90.19",
-    "@tanstack/react-router": "^1.151.6",
-    "@tanstack/react-router-ssr-query": "^1.151.6",
-    "@tanstack/react-start": "^1.151.6",
-    "axios": "^1.13.2",
+    "@libsql/client": "^0.17.4",
+    "@radix-ui/react-slot": "^1.3.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-router": "^1.170.18",
+    "@tanstack/react-router-ssr-query": "^1.167.1",
+    "@tanstack/react-start": "1.168.32",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dotenv": "^17.2.4",
-    "drizzle-orm": "^0.45.1",
-    "hono": "^4.11.4",
-    "lucide-react": "^0.562.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "tailwind-merge": "^3.4.0",
-    "tailwindcss": "^4.1.18",
-    "zod": "^4.3.5"
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.32",
+    "lucide-react": "^1.27.0",
+    "pg": "^8.22.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.3",
+    "zod": "^4.4.3"
   }
 }

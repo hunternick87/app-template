@@ -16,7 +16,7 @@ export const getStoredTheme = createServerFn().handler(async () => {
 });
 
 export const setStoredTheme = createServerFn({ method: "POST" })
-    .inputValidator(ThemeSchema)
+    .validator(ThemeSchema)
     .handler(({ data }) => {
         setCookie(themeCookie, data);
     });

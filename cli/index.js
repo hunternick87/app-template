@@ -1,360 +1,156 @@
 #!/usr/bin/env node
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { spawn } from "node:child_process";
-import * as p from '@clack/prompts';
-import { setTimeout } from 'node:timers/promises';
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { spawn } from 'node:child_process'
+import * as p from '@clack/prompts'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const projectNamePattern = /^[a-z0-9][a-z0-9-]*$/
 
-async function main() {
-    console.clear();
-
-    p.intro('🚀 Welcome to HCWS Project Creator!');
-
-    // Get project name
-    const args = process.argv.slice(2);
-    let projectName = args[0];
-
-    if (!projectName) {
-        projectName = await p.text({
-            message: 'What is your project name?',
-            placeholder: 'my-awesome-app',
-            validate: (value) => {
-                if (!value) return 'Project name is required';
-                if (!/^[a-z0-9-]+$/.test(value)) return 'Project name can only contain lowercase letters, numbers, and hyphens';
-            }
-        });
-
-        if (p.isCancel(projectName)) {
-            p.cancel('Operation cancelled.');
-            process.exit(0);
-        }
-    }
-
-    // Ask about database
-    const database = await p.select({
-        message: 'Which database would you like to use?',
-        options: [
-            { value: 'sqlite', label: 'SQLite', hint: 'File-based, great for development' },
-            { value: 'postgresql', label: 'PostgreSQL', hint: 'Production-ready, scalable' }
-        ],
-    });
-
-    if (p.isCancel(database)) {
-        p.cancel('Operation cancelled.');
-        process.exit(0);
-    }
-
-    const platform = await p.select({
-        message: 'What are you building?',
-        options: [
-            { value: 'web', label: 'Website', hint: 'Browser app (current template)' },
-            // { value: 'electron', label: 'Electron', hint: 'Desktop app wrapper around the web app' }, // temp hide until we have the electron overlay ready
-        ],
-    });
-
-    if (p.isCancel(platform)) {
-        p.cancel('Operation cancelled.');
-        process.exit(0);
-    }
-
-    const themeMode = await p.select({
-        message: 'Default color mode?',
-        options: [
-            { value: 'light', label: 'Light only', hint: 'No theme switcher' },
-            { value: 'dark', label: 'Dark only', hint: 'No theme switcher' },
-            { value: 'both', label: 'Both (light + dark)', hint: 'Includes ThemeProvider + toggle' },
-        ],
-    });
-
-    if (p.isCancel(themeMode)) {
-        p.cancel('Operation cancelled.');
-        process.exit(0);
-    }
-
-    // Ask about additional features
-    // const features = await p.multiselect({
-    //     message: 'Select additional features:',
-    //     options: [
-    //         { value: 'auth', label: 'Authentication', hint: 'User login/signup' },
-    //         { value: 'email', label: 'Email Service', hint: 'Send transactional emails' },
-    //         { value: 'stripe', label: 'Stripe Integration', hint: 'Payment processing' },
-    //         { value: 'analytics', label: 'Analytics', hint: 'Track user events' },
-    //     ],
-    //     required: false,
-    // });
-
-    // if (p.isCancel(features)) {
-    //     p.cancel('Operation cancelled.');
-    //     process.exit(0);
-    // }
-
-    // Confirm settings
-    const shouldContinue = await p.confirm({
-        message: 'Install dependencies after scaffolding?',
-        initialValue: true,
-    });
-
-    if (p.isCancel(shouldContinue)) {
-        p.cancel('Operation cancelled.');
-        process.exit(0);
-    }
-
-    // const autoCode = await p.confirm({
-    //     message: 'Open in VS Code after installation?',
-    //     initialValue: false,
-    // });
-
-    // if (p.isCancel(autoCode)) {
-    //     p.cancel('Operation cancelled.');
-    //     process.exit(0);
-    // }
-
-    const codeEditor = await p.multiselect({
-        message: 'Open in code editor after installation?',
-        options: [
-            { value: 'vscode', label: 'VS Code' },
-            { value: 'antigravity', label: 'Antigravity' },
-        ],
-        required: false,
-    });
-
-    if (p.isCancel(codeEditor)) {
-        p.cancel('Operation cancelled.');
-        process.exit(0);
-    }
-
-    // Start spinner for file operations
-    const s = p.spinner();
-    s.start('Creating project');
-
-    // Determine the target directory
-    const targetDir = path.resolve(process.cwd(), projectName);
-
-    // Create target directory if it doesn't exist
-    if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-    }
-
-    // Check if directory is empty
-    const existing = fs.readdirSync(targetDir);
-    if (existing.length > 0) {
-        s.stop('Directory is not empty');
-        p.outro(`Error: Directory ${targetDir} is not empty.`);
-        process.exit(1);
-    }
-
-    // Copy template files
-    const templateDir = path.resolve(__dirname, '..', 'template');
-    const genericDir = path.resolve(templateDir, '..', 'generic');
-
-    function copyRecursive(src, dest) {
-        const stats = fs.statSync(src);
-
-        if (stats.isDirectory()) {
-            if (!fs.existsSync(dest)) {
-                fs.mkdirSync(dest, { recursive: true });
-            }
-            const files = fs.readdirSync(src);
-            files.forEach(file => {
-                copyRecursive(path.join(src, file), path.join(dest, file));
-            });
-        } else {
-            fs.copyFileSync(src, dest);
-        }
-    }
-
-    s.message('Copying template files');
-    copyRecursive(templateDir, targetDir);
-
-    // Update package.json with project name and database choice
-    s.message('Updating configuration');
-    const packageJsonPath = path.join(targetDir, 'package.json');
-    let packageJsonText = fs.readFileSync(packageJsonPath, 'utf8');
-    packageJsonText = packageJsonText.replace('{{PROJECT_NAME}}', projectName);
-    fs.writeFileSync(packageJsonPath, packageJsonText);
-
-    // Create a config file with the selected options
-    const configPath = path.join(targetDir, 'project.config.json');
-    fs.writeFileSync(configPath, JSON.stringify({
-        platform,
-        database,
-        themeMode,
-        // features,
-    }, null, 2));
-
-    function safeUnlink(filePath) {
-        try {
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        } catch {
-            // ignore
-        }
-    }
-
-    function safeWriteFile(filePath, contents) {
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        fs.writeFileSync(filePath, contents);
-    }
-
-    function updatePackageJson(mutator) {
-        const obj = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-        mutator(obj);
-        fs.writeFileSync(packageJsonPath, JSON.stringify(obj, null, 2) + '\n');
-    }
-
-    // database specific setup
-    const drizzleConfigPath = path.join(targetDir, 'drizzle.config.ts');
-    const dbIndexPath = path.join(targetDir, 'src', 'db', 'index.ts');
-    let drizzleConfigJson = fs.readFileSync(drizzleConfigPath, 'utf8');
-    let dbIndexJson = fs.readFileSync(dbIndexPath, 'utf8');
-    if (database === 'sqlite') {
-        // SQLite specific setup if needed
-        dbIndexJson = dbIndexJson.replace('{{drizzleImport}}', "import { drizzle } from 'drizzle-orm/bun-sqlite';");
-        drizzleConfigJson = drizzleConfigJson.replace('{{drizzleDialect}}', "sqlite");
-
-        fs.copyFileSync(genericDir + "/db/bun_sqlite/schema.ts", targetDir + '/src/db/schema.ts');
-
-        await new Promise((resolve, reject) => {
-          const install = spawn('bun', ['install', '@libsql/client'], { cwd: targetDir, stdio: 'pipe' });
-          install.on('close', (code) => code === 0 ? resolve() : reject());
-        });
-    } else if (database === 'postgresql') {
-        // PostgreSQL specific setup if needed
-        dbIndexJson = dbIndexJson.replace('{{drizzleImport}}', "import { drizzle } from 'drizzle-orm/node-postgres';");
-        drizzleConfigJson = drizzleConfigJson.replace('{{drizzleDialect}}', "postgresql");
-
-        await new Promise((resolve, reject) => {
-          const install = spawn('bun', ['install', '-d', '@types/pg', 'tsx'], { cwd: targetDir, stdio: 'pipe' });
-          install.on('close', (code) => code === 0 ? resolve() : reject());
-        });
-
-        await new Promise((resolve, reject) => {
-          const install = spawn('bun', ['install', 'pg'], { cwd: targetDir, stdio: 'pipe' });
-          install.on('close', (code) => code === 0 ? resolve() : reject());
-        });
-
-        fs.copyFileSync(genericDir + "/db/postgresql/schema.ts", targetDir + '/src/db/schema.ts');
-    }
-
-    fs.writeFileSync(drizzleConfigPath, drizzleConfigJson);
-    fs.writeFileSync(dbIndexPath, dbIndexJson);
-
-    // Theme mode setup
-    if (themeMode !== 'both') {
-        const themeProviderPath = path.join(targetDir, 'src', 'web', 'components', 'theme-provider.tsx');
-        const themeTogglePath = path.join(targetDir, 'src', 'web', 'components', 'themeToggle.tsx');
-        safeUnlink(themeProviderPath);
-        safeUnlink(themeTogglePath);
-
-        const rootRoutePath = path.join(targetDir, 'src', 'web', 'routes', '__root.tsx');
-        const indexRoutePath = path.join(targetDir, 'src', 'web', 'routes', 'index.tsx');
-        const apiFuncRoutePath = path.join(targetDir, 'src', 'web', 'routes', 'demo', 'apiFunc.tsx');
-        const serverFuncRoutePath = path.join(targetDir, 'src', 'web', 'routes', 'demo', 'serverFunc.tsx');
-
-        const htmlAttrs = themeMode === 'dark'
-            ? ' className="dark" suppressHydrationWarning'
-            : ' suppressHydrationWarning';
-
-        safeWriteFile(rootRoutePath, `/// <reference types="vite/client" />\nimport type { ReactNode } from 'react'\nimport { Outlet, createRootRouteWithContext, HeadContent, Scripts } from '@tanstack/react-router'\nimport appCss from "../index.css?url";\nimport type { QueryClient } from '@tanstack/react-query'\n\nexport const Route = createRootRouteWithContext<{\n  queryClient: QueryClient\n}>()({\n  head: () => ({\n    meta: [\n      { charSet: 'utf-8' },\n      { name: 'viewport', content: 'width=device-width, initial-scale=1' },\n      { title: 'TanStack Start Starter' },\n    ],\n    links: [{ rel: 'stylesheet', href: appCss }],\n  }),\n  component: RootComponent,\n})\n\nfunction RootComponent() {\n  return (\n    <RootDocument>\n      <Outlet />\n    </RootDocument>\n  )\n}\n\nfunction RootDocument({ children }: Readonly<{ children: ReactNode }>) {\n  return (\n    <html${htmlAttrs}>\n      <head>\n        <HeadContent />\n      </head>\n      <body>\n        {children}\n        <Scripts />\n      </body>\n    </html>\n  )\n}\n`);
-
-        safeWriteFile(indexRoutePath, `// src/routes/index.tsx\nimport { createFileRoute, Link } from '@tanstack/react-router'\n\nexport const Route = createFileRoute('/')({\n  component: Home,\n})\n\nfunction Home() {\n  return (\n    <div className=\"flex min-h-svh flex-col items-center justify-center\">\n      <div className=\"mt-8 space-x-4\">\n        <Link to=\"/demo/apiFunc\">\n          <button className=\"btn\">Demo: API Function</button>\n        </Link>\n        <Link to=\"/demo/serverFunc\">\n          <button className=\"btn\">Demo: Server Function</button>\n        </Link>\n      </div>\n    </div>\n  )\n}\n`);
-
-        safeWriteFile(apiFuncRoutePath, `// src/routes/index.tsx\nimport { createFileRoute, useRouter } from '@tanstack/react-router'\nimport { Button } from "@/components/ui/button"\nimport { readCount, incrementCount } from '@/api'\nimport { useQuery, useMutation } from '@tanstack/react-query'\n\nexport const Route = createFileRoute('/demo/apiFunc')({\n  component: Home\n})\n\nfunction Home() {\n  const router = useRouter()\n  const routeContext = Route.useRouteContext()\n\n  const query = useQuery({ queryKey: ['count'], queryFn: readCount })\n\n  const mutation = useMutation({\n    mutationFn: incrementCount,\n    onSuccess: () => {\n      // Invalidate and refetch\n      routeContext.queryClient.invalidateQueries({ queryKey: ['count'] })\n    },\n  })\n\n  return (\n    <div className=\"flex min-h-svh flex-col items-center justify-center\">\n      <Button\n        onClick={() => {\n          mutation.mutate(1)\n        }}\n      >Add 1 to {query.data}?</Button>\n      <div className=\"mt-4\">Current Count: {query.data}</div>\n    </div>\n  )\n}\n`);
-
-        safeWriteFile(serverFuncRoutePath, `// src/routes/index.tsx\nimport * as fs from 'node:fs'\nimport { createFileRoute, useRouter } from '@tanstack/react-router'\nimport { createServerFn } from '@tanstack/react-start'\nimport { Button } from "@/components/ui/button"\n\nconst filePath = 'private/count.txt'\n\nasync function readCount() {\n  return parseInt(await fs.promises.readFile(filePath, 'utf-8').catch(() => '0'))\n}\n\nconst getCount = createServerFn({ method: 'GET' }).handler(() => {\n  return readCount()\n})\n\nconst updateCount = createServerFn({ method: 'POST' })\n  .inputValidator((d: number) => d)\n  .handler(async ({ data }) => {\n    const count = await readCount()\n    await fs.promises.writeFile(filePath, String(count + data))\n  })\n\nexport const Route = createFileRoute('/demo/serverFunc')({\n  component: Home,\n  loader: async () => await getCount(),\n})\n\nfunction Home() {\n  const router = useRouter()\n  const state = Route.useLoaderData()\n\n  return (\n    <div className=\"flex min-h-svh flex-col items-center justify-center\">\n      <Button\n        onClick={() => {\n          updateCount({ data: 1 }).then(() => {\n            router.invalidate()\n          })\n        }}\n      >Add 1 to {state}?</Button>\n      <div className=\"mt-4\">Current Count: {state}</div>\n    </div>\n  )\n}\n`);
-
-        const cssPath = path.join(targetDir, 'src', 'web', 'index.css');
-        if (themeMode === 'light') {
-            safeWriteFile(cssPath, `@import "tailwindcss";\n@import "tw-animate-css";\n\n@theme inline {\n  --radius-sm: calc(var(--radius) - 4px);\n  --radius-md: calc(var(--radius) - 2px);\n  --radius-lg: var(--radius);\n  --radius-xl: calc(var(--radius) + 4px);\n  --radius-2xl: calc(var(--radius) + 8px);\n  --radius-3xl: calc(var(--radius) + 12px);\n  --radius-4xl: calc(var(--radius) + 16px);\n  --color-background: var(--background);\n  --color-foreground: var(--foreground);\n  --color-card: var(--card);\n  --color-card-foreground: var(--card-foreground);\n  --color-popover: var(--popover);\n  --color-popover-foreground: var(--popover-foreground);\n  --color-primary: var(--primary);\n  --color-primary-foreground: var(--primary-foreground);\n  --color-secondary: var(--secondary);\n  --color-secondary-foreground: var(--secondary-foreground);\n  --color-muted: var(--muted);\n  --color-muted-foreground: var(--muted-foreground);\n  --color-accent: var(--accent);\n  --color-accent-foreground: var(--accent-foreground);\n  --color-destructive: var(--destructive);\n  --color-border: var(--border);\n  --color-input: var(--input);\n  --color-ring: var(--ring);\n  --color-chart-1: var(--chart-1);\n  --color-chart-2: var(--chart-2);\n  --color-chart-3: var(--chart-3);\n  --color-chart-4: var(--chart-4);\n  --color-chart-5: var(--chart-5);\n  --color-sidebar: var(--sidebar);\n  --color-sidebar-foreground: var(--sidebar-foreground);\n  --color-sidebar-primary: var(--sidebar-primary);\n  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);\n  --color-sidebar-accent: var(--sidebar-accent);\n  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);\n  --color-sidebar-border: var(--sidebar-border);\n  --color-sidebar-ring: var(--sidebar-ring);\n}\n\n:root {\n  --radius: 0.625rem;\n  --background: oklch(1 0 0);\n  --foreground: oklch(0.145 0 0);\n  --card: oklch(1 0 0);\n  --card-foreground: oklch(0.145 0 0);\n  --popover: oklch(1 0 0);\n  --popover-foreground: oklch(0.145 0 0);\n  --primary: oklch(0.205 0 0);\n  --primary-foreground: oklch(0.985 0 0);\n  --secondary: oklch(0.97 0 0);\n  --secondary-foreground: oklch(0.205 0 0);\n  --muted: oklch(0.97 0 0);\n  --muted-foreground: oklch(0.556 0 0);\n  --accent: oklch(0.97 0 0);\n  --accent-foreground: oklch(0.205 0 0);\n  --destructive: oklch(0.577 0.245 27.325);\n  --border: oklch(0.922 0 0);\n  --input: oklch(0.922 0 0);\n  --ring: oklch(0.708 0 0);\n  --chart-1: oklch(0.646 0.222 41.116);\n  --chart-2: oklch(0.6 0.118 184.704);\n  --chart-3: oklch(0.398 0.07 227.392);\n  --chart-4: oklch(0.828 0.189 84.429);\n  --chart-5: oklch(0.769 0.188 70.08);\n  --sidebar: oklch(0.985 0 0);\n  --sidebar-foreground: oklch(0.145 0 0);\n  --sidebar-primary: oklch(0.205 0 0);\n  --sidebar-primary-foreground: oklch(0.985 0 0);\n  --sidebar-accent: oklch(0.97 0 0);\n  --sidebar-accent-foreground: oklch(0.205 0 0);\n  --sidebar-border: oklch(0.922 0 0);\n  --sidebar-ring: oklch(0.708 0 0);\n}\n\n@layer base {\n  * {\n    @apply border-border outline-ring/50;\n  }\n  body {\n    @apply bg-background text-foreground;\n  }\n}\n`);
-        } else {
-            safeWriteFile(cssPath, `@import "tailwindcss";\n@import "tw-animate-css";\n\n@theme inline {\n  --radius-sm: calc(var(--radius) - 4px);\n  --radius-md: calc(var(--radius) - 2px);\n  --radius-lg: var(--radius);\n  --radius-xl: calc(var(--radius) + 4px);\n  --radius-2xl: calc(var(--radius) + 8px);\n  --radius-3xl: calc(var(--radius) + 12px);\n  --radius-4xl: calc(var(--radius) + 16px);\n  --color-background: var(--background);\n  --color-foreground: var(--foreground);\n  --color-card: var(--card);\n  --color-card-foreground: var(--card-foreground);\n  --color-popover: var(--popover);\n  --color-popover-foreground: var(--popover-foreground);\n  --color-primary: var(--primary);\n  --color-primary-foreground: var(--primary-foreground);\n  --color-secondary: var(--secondary);\n  --color-secondary-foreground: var(--secondary-foreground);\n  --color-muted: var(--muted);\n  --color-muted-foreground: var(--muted-foreground);\n  --color-accent: var(--accent);\n  --color-accent-foreground: var(--accent-foreground);\n  --color-destructive: var(--destructive);\n  --color-border: var(--border);\n  --color-input: var(--input);\n  --color-ring: var(--ring);\n  --color-chart-1: var(--chart-1);\n  --color-chart-2: var(--chart-2);\n  --color-chart-3: var(--chart-3);\n  --color-chart-4: var(--chart-4);\n  --color-chart-5: var(--chart-5);\n  --color-sidebar: var(--sidebar);\n  --color-sidebar-foreground: var(--sidebar-foreground);\n  --color-sidebar-primary: var(--sidebar-primary);\n  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);\n  --color-sidebar-accent: var(--sidebar-accent);\n  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);\n  --color-sidebar-border: var(--sidebar-border);\n  --color-sidebar-ring: var(--sidebar-ring);\n}\n\n:root {\n  --radius: 0.625rem;\n  --background: oklch(0.145 0 0);\n  --foreground: oklch(0.985 0 0);\n  --card: oklch(0.205 0 0);\n  --card-foreground: oklch(0.985 0 0);\n  --popover: oklch(0.205 0 0);\n  --popover-foreground: oklch(0.985 0 0);\n  --primary: oklch(0.922 0 0);\n  --primary-foreground: oklch(0.205 0 0);\n  --secondary: oklch(0.269 0 0);\n  --secondary-foreground: oklch(0.985 0 0);\n  --muted: oklch(0.269 0 0);\n  --muted-foreground: oklch(0.708 0 0);\n  --accent: oklch(0.269 0 0);\n  --accent-foreground: oklch(0.985 0 0);\n  --destructive: oklch(0.704 0.191 22.216);\n  --border: oklch(1 0 0 / 10%);\n  --input: oklch(1 0 0 / 15%);\n  --ring: oklch(0.556 0 0);\n  --chart-1: oklch(0.488 0.243 264.376);\n  --chart-2: oklch(0.696 0.17 162.48);\n  --chart-3: oklch(0.769 0.188 70.08);\n  --chart-4: oklch(0.627 0.265 303.9);\n  --chart-5: oklch(0.645 0.246 16.439);\n  --sidebar: oklch(0.205 0 0);\n  --sidebar-foreground: oklch(0.985 0 0);\n  --sidebar-primary: oklch(0.488 0.243 264.376);\n  --sidebar-primary-foreground: oklch(0.985 0 0);\n  --sidebar-accent: oklch(0.269 0 0);\n  --sidebar-accent-foreground: oklch(0.985 0 0);\n  --sidebar-border: oklch(1 0 0 / 10%);\n  --sidebar-ring: oklch(0.556 0 0);\n}\n\n@layer base {\n  * {\n    @apply border-border outline-ring/50;\n  }\n  body {\n    @apply bg-background text-foreground;\n  }\n}\n`);
-        }
-    }
-
-    // Electron platform overlay
-    if (platform === 'electron') {
-        const electronOverlayDir = path.resolve(genericDir, 'electron');
-        if (fs.existsSync(electronOverlayDir)) {
-            s.message('Adding Electron files');
-            copyRecursive(electronOverlayDir, targetDir);
-        }
-
-        updatePackageJson((pkg) => {
-            pkg.devDependencies = pkg.devDependencies || {};
-            pkg.scripts = pkg.scripts || {};
-            if (!pkg.devDependencies.electron) {
-                pkg.devDependencies.electron = '^32.0.0';
-            }
-            if (!pkg.scripts['dev:electron']) {
-                pkg.scripts['dev:electron'] = 'node scripts/electron-dev.mjs';
-            }
-            if (!pkg.scripts['start:electron']) {
-                pkg.scripts['start:electron'] = 'node scripts/electron-start.mjs';
-            }
-        });
-
-        const readmePath = path.join(targetDir, 'README.md');
-        if (fs.existsSync(readmePath)) {
-            const readme = fs.readFileSync(readmePath, 'utf8');
-            if (!readme.includes('## Electron')) {
-                fs.writeFileSync(readmePath, `${readme.trim()}\n\n## Electron\n\nRun the desktop app in dev (starts the web dev server + Electron):\n\n\`\`\`bash\nbun run dev:electron\n\`\`\`\n\nRun the desktop app against the production build:\n\n\`\`\`bash\nbun run build\nbun run start:electron\n\`\`\`\n`);
-            }
-        }
-    }
-
-    s.stop('Project created');
-
-    // Install dependencies if confirmed
-    if (shouldContinue) {
-        const installSpinner = p.spinner();
-        installSpinner.start('Installing dependencies');
-
-        // Actual install:
-        await new Promise((resolve, reject) => {
-          const install = spawn('bun', ['install'], { cwd: targetDir, stdio: 'pipe' });
-          install.on('close', (code) => code === 0 ? resolve() : reject());
-        });
-
-        installSpinner.stop('Dependencies installed');
-    }
-
-    // Open in VS Code if confirmed
-    // if (autoCode) {
-    //     spawn("code", [targetDir], {
-    //         stdio: "inherit",
-    //         shell: true,
-    //     });
-    // }
-
-    if (codeEditor) {
-        const editorCommands = {
-            vscode: 'code',
-            antigravity: 'antigravity',
-        };
-        const editorCommand = editorCommands[codeEditor[0]];
-        spawn(editorCommand, [targetDir], {
-            stdio: "inherit",
-            shell: true,
-        });
-    }
-
-    // Final message
-    const devCommand = platform === 'electron' ? 'bun run dev:electron' : 'bun run dev'
-    let nextSteps = p.note(
-        shouldContinue
-            ? `cd ${projectName}\n${devCommand}`
-            : `cd ${projectName}\nbun install\n${devCommand}`,
-        'Next steps'
-    );
-
-    p.outro('Happy coding! 🚀');
+function validateProjectName(value) {
+  if (!value) return 'Project name is required'
+  if (!projectNamePattern.test(value)) return 'Use lowercase letters, numbers, and hyphens only'
+  return undefined
 }
 
-main().catch((error) => {
-    console.error('Error:', error);
-    process.exit(1);
-});
+function copyRecursive(source, destination) {
+  const stats = fs.statSync(source)
+  if (stats.isDirectory()) {
+    if (['node_modules', 'dist', '.env'].includes(path.basename(source))) return
+    fs.mkdirSync(destination, { recursive: true })
+    for (const entry of fs.readdirSync(source)) {
+      copyRecursive(path.join(source, entry), path.join(destination, entry))
+    }
+    return
+  }
+  fs.copyFileSync(source, destination)
+}
+
+function run(command, args, cwd) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd, stdio: 'inherit' })
+    child.once('error', reject)
+    child.once('close', (code) => code === 0 ? resolve() : reject(new Error(`${command} exited with code ${code}`)))
+  })
+}
+
+function configureDatabase(targetDir, database) {
+  const dbIndexPath = path.join(targetDir, 'src', 'db', 'index.ts')
+  const drizzleConfigPath = path.join(targetDir, 'drizzle.config.ts')
+  const schemaSource = path.join(__dirname, '..', 'generic', 'db', database, 'schema.ts')
+
+  const setup = database === 'sqlite'
+    ? "import { createClient } from '@libsql/client';\nimport { drizzle } from 'drizzle-orm/libsql';\n\nconst client = createClient({ url: process.env.DATABASE_URL ?? 'file:local.db' });\nconst db = drizzle(client);"
+    : "import { Pool } from 'pg';\nimport { drizzle } from 'drizzle-orm/node-postgres';\n\nconst pool = new Pool({ connectionString: process.env.DATABASE_URL });\nconst db = drizzle(pool);"
+  const credentials = database === 'sqlite'
+    ? "dialect: 'sqlite',\n    dbCredentials: { url: process.env.DATABASE_URL ?? 'file:local.db' },"
+    : "dialect: 'postgresql',\n    dbCredentials: { url: process.env.DATABASE_URL! },"
+
+  fs.copyFileSync(schemaSource, path.join(targetDir, 'src', 'db', 'schema.ts'))
+  fs.writeFileSync(dbIndexPath, fs.readFileSync(dbIndexPath, 'utf8').replace('{{drizzleSetup}}', setup))
+  fs.writeFileSync(drizzleConfigPath, fs.readFileSync(drizzleConfigPath, 'utf8').replace('{{drizzleConfig}}', credentials))
+}
+
+function configureTheme(targetDir, themeMode) {
+  const rootRoutePath = path.join(targetDir, 'src', 'web', 'routes', '__root.tsx')
+  const rootRoute = fs.readFileSync(rootRoutePath, 'utf8')
+  const initialTheme = themeMode === 'both' ? 'await getStoredTheme()' : `'${themeMode}' as const`
+  fs.writeFileSync(rootRoutePath, rootRoute.replace('{{initialTheme}}', initialTheme))
+
+  if (themeMode === 'both') return
+
+  for (const route of ['index.tsx', 'demo/apiFunc.tsx', 'demo/serverFunc.tsx']) {
+    const routePath = path.join(targetDir, 'src', 'web', 'routes', route)
+    const contents = fs.readFileSync(routePath, 'utf8')
+      .replace(/^import \{ ThemeToggle \}.*\n/m, '')
+      .replace(/\s*<div className="mt-8">\s*<ThemeToggle \/>\s*<\/div>/g, '')
+    fs.writeFileSync(routePath, contents)
+  }
+}
+
+function replaceTemplateTokens(targetDir, projectName) {
+  for (const relativePath of ['package.json', 'README.md', 'src/web/routes/__root.tsx']) {
+    const filePath = path.join(targetDir, relativePath)
+    fs.writeFileSync(filePath, fs.readFileSync(filePath, 'utf8').replaceAll('{{PROJECT_NAME}}', projectName))
+  }
+}
+
+async function main() {
+  p.intro('Create App Template')
+
+  const args = process.argv.slice(2)
+  const unattended = args.includes('--yes')
+  const databaseFlag = args.find((arg) => arg.startsWith('--database='))?.split('=')[1]
+  const themeFlag = args.find((arg) => arg.startsWith('--theme='))?.split('=')[1]
+  let projectName = args.find((arg) => !arg.startsWith('--'))
+  if (projectName) {
+    const error = validateProjectName(projectName)
+    if (error) throw new Error(error)
+  } else {
+    projectName = await p.text({ message: 'Project name', placeholder: 'my-awesome-app', validate: validateProjectName })
+    if (p.isCancel(projectName)) return p.cancel('Operation cancelled.')
+  }
+
+  const database = unattended ? (databaseFlag ?? 'sqlite') : await p.select({
+    message: 'Database',
+    options: [
+      { value: 'sqlite', label: 'SQLite', hint: 'Local file database' },
+      { value: 'postgresql', label: 'PostgreSQL', hint: 'Networked database' },
+    ],
+  })
+  if (!['sqlite', 'postgresql'].includes(database)) throw new Error('Database must be sqlite or postgresql')
+  if (p.isCancel(database)) return p.cancel('Operation cancelled.')
+
+  const themeMode = unattended ? (themeFlag ?? 'both') : await p.select({
+    message: 'Color mode',
+    options: [
+      { value: 'light', label: 'Light only' },
+      { value: 'dark', label: 'Dark only' },
+      { value: 'both', label: 'Light and dark' },
+    ],
+  })
+  if (!['light', 'dark', 'both'].includes(themeMode)) throw new Error('Theme must be light, dark, or both')
+  if (p.isCancel(themeMode)) return p.cancel('Operation cancelled.')
+
+  const installDependencies = unattended ? !args.includes('--no-install') : await p.confirm({ message: 'Install dependencies?', initialValue: true })
+  if (p.isCancel(installDependencies)) return p.cancel('Operation cancelled.')
+
+  const targetDir = path.resolve(process.cwd(), projectName)
+  if (path.dirname(targetDir) !== path.resolve(process.cwd())) {
+    throw new Error('Project must be created directly inside the current directory')
+  }
+  if (fs.existsSync(targetDir)) {
+    throw new Error(`Target directory already exists: ${projectName}`)
+  }
+
+  const spinner = p.spinner()
+  spinner.start('Creating project')
+  copyRecursive(path.join(__dirname, '..', 'template'), targetDir)
+
+  replaceTemplateTokens(targetDir, projectName)
+  configureDatabase(targetDir, database)
+  configureTheme(targetDir, themeMode)
+  fs.writeFileSync(path.join(targetDir, 'project.config.json'), JSON.stringify({ database, themeMode }, null, 2) + '\n')
+  spinner.stop('Project created')
+
+  if (installDependencies) {
+    const installSpinner = p.spinner()
+    installSpinner.start('Installing dependencies')
+    await run('bun', ['install'], targetDir)
+    installSpinner.stop('Dependencies installed')
+  }
+
+  p.note(`cd ${projectName}\nbun run dev`, 'Next steps')
+  p.outro('Happy coding!')
+}
+
+if (import.meta.main) {
+  main().catch((error) => {
+    p.cancel(error instanceof Error ? error.message : String(error))
+    process.exitCode = 1
+  })
+}
+
+export { validateProjectName }

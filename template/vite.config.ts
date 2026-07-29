@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite'
-import tsConfigPaths from 'vite-tsconfig-paths'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -12,7 +11,6 @@ export default defineConfig({
         port: 3000,
     },
     plugins: [
-        tsConfigPaths(),
         tanstackStart({
             router: {
                 entry: 'web/router.tsx',
@@ -25,6 +23,7 @@ export default defineConfig({
         tailwindcss(),
     ],
     resolve: {
+        tsconfigPaths: true,
         alias: {
             "@": path.resolve(__dirname, "src/web"),
         },

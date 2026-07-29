@@ -4,7 +4,7 @@ FROM oven/bun:1 AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lockb* ./
+COPY package.json bun.lock ./
 
 # Install dependencies
 RUN bun install --frozen-lockfile
@@ -22,12 +22,9 @@ WORKDIR /app
 
 # Copy only the compiled files from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json /app/bun.lock ./
 
-# Copy package.json for any runtime dependencies
-COPY --from=builder /app/package.json ./
-
-# Install only production dependencies if needed
-RUN bun install --production --frozen-lockfile || true
+RUN bun install --production --frozen-lockfile
 
 # Expose port (adjust as needed)
 EXPOSE 3000

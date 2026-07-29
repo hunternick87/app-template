@@ -1,4 +1,4 @@
-# app-template
+# {{PROJECT_NAME}}
 
 A modern web application template with Bun, React, TanStack Router/Query, and Vite.
 
@@ -39,4 +39,4 @@ bun run start
 - 🔧 TypeScript for type safety
 - 🌐 Hono for server-side API
 
-This project was created using `bun init` in bun v1.3.4. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+Run `bun run check` before committing to typecheck and build the application.

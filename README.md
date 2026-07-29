@@ -1,6 +1,6 @@
-# app-template
+# create-app-template
 
-A modern web application template with Bun, React, TanStack Router/Query, and Vite.
+An npm package that scaffolds Bun, React, TanStack Start, and Vite applications.
 
 ## Quick Start
 
@@ -17,6 +17,12 @@ bun create app-template my-app
 npm create app-template
 ```
 
+## Repository layout
+
+- `cli/` — the published project generator.
+- `template/` — the sole canonical base app copied into new projects.
+- `generic/` — small, option-specific overlays used by the generator.
+
 ## Development
 
 To install dependencies:
@@ -25,33 +31,8 @@ To install dependencies:
 bun install
 ```
 
-To run in development mode:
+To run the generator locally:
 
 ```bash
-bun run dev
+bun cli/index.js my-app
 ```
-
-To build for production:
-
-```bash
-bun run build
-```
-
-To start the production server:
-
-```bash
-bun run start
-```
-
-## Features
-
-- ⚡️ Bun runtime for fast JavaScript/TypeScript execution
-- ⚛️ React 19 for building user interfaces
-- 🛣️ TanStack Router for type-safe routing
-- 📡 TanStack Query for data fetching and caching
-- 🎨 Tailwind CSS for styling
-- 🔥 Vite for lightning-fast development
-- 🔧 TypeScript for type safety
-- 🌐 Hono for server-side API
-
-This project was created using `bun init` in bun v1.3.4. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
